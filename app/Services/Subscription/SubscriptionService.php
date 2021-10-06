@@ -5,6 +5,8 @@ namespace App\Services\Subscription;
 use App\Repositories\Subscriber\SubscriberRepository;
 use App\Repositories\Topic\TopicRepository;
 use Exception;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SubscriptionService
 {
@@ -21,32 +23,32 @@ class SubscriptionService
     {
         $subscriberUrl = $data['url'];
 
+        // check if subscriber exists
+        $subscriberExists = $this->subscriberRepository->where('url', $subscriberUrl)->first();
+
         // check if topic exists
         $topicExists = $this->topicRepository->where('topic', $topic)->first();
 
-        if ($topicExists) {
+        if ($topicExists && $subscriberExists) {
             // check if matching subscriber/topic exists
-            $subscriberExists = $this->subscriberRepository->where('topic_id', $topicExists->id)->where('url', $subscriberUrl)->first();
+            $subscriberAndTopicMatches = DB::table('subscriber_topic')->where('topic_id', $topicExists->id)->where('subscriber_id', $subscriberExists->id)->first();
 
-            if ($subscriberExists) {
+            if ($subscriberAndTopicMatches) {
                 throw new Exception('Subscription already exists for topic ' . $topic);
             }
 
-            return $this->subscriberRepository->create([
-                'topic_id' => $topicExists->id,
-                'url' => $subscriberUrl
-            ]);
+            // no combo match found so just sync and return
+            $topicExists->subscribers()->sync($subscriberExists->id);
+
+            return ['topic' => $topicExists->topic, 'url' => $subscriberExists->url];
         }
 
         // fresh and new creation
         $topicCreated = $this->topicRepository->create(['topic' => $topic]);
 
-        $subscriptionData = [
-            'topic_id' => $topicCreated->id,
-            'url' => $subscriberUrl
-        ];
+        $subscriber = $this->subscriberRepository->create(['url' => $subscriberUrl]);
 
-        $subscriber = $this->subscriberRepository->create($subscriptionData);
+        $topicCreated->subscribers()->sync($subscriber->id);
 
         return ['topic' => $topicCreated->topic, 'url' => $subscriber->url];
     }

@@ -14,6 +14,6 @@ class Topic extends Model
 
     public function subscribers()
     {
-        return $this->hasMany(Subscriber::class);
+        return $this->belongsToMany(Subscriber::class);
     }
 }

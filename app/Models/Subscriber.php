@@ -12,8 +12,8 @@ class Subscriber extends Model
 
     protected $guarded = [];
 
-    public function topic()
+    public function topics()
     {
-        return $this->belongsTo(Topic::class);
+        return $this->belongsToMany(Topic::class);
     }
 }
