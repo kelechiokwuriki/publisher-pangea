@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PublishStatus;
 use App\Repositories\Subscriber\SubscriberRepository;
 use App\Repositories\Topic\TopicRepository;
+use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -28,6 +29,8 @@ class PublisherService
             'topic' => $topic,
             'data' => $message
         ];
+
+        if (!$topicExists) throw new Exception('Topic does not exist');
 
         if (count($topicExists->subscribers) > 0) {
             $subscribers = $topicExists->subscribers;
