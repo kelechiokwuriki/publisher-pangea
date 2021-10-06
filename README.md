@@ -6,7 +6,7 @@
 composer install
 ## Run publisher server
 1. php artisan migrate
-2. php artisan serve
+2. php artisan serve or sh start-server.sh
 ## API DOC
 Note: Use the url and port from the subscriber service when creating a subscription.
 
