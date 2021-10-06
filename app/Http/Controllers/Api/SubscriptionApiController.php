@@ -25,7 +25,6 @@ class SubscriptionApiController extends Controller
     {
         try {
             $subscription = $this->subscriptionService->createSubscription($topic, $request->all());
-
             return response($subscription, 201);
 
         } catch (Exception $e) {
