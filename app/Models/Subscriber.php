@@ -16,4 +16,9 @@ class Subscriber extends Model
     {
         return $this->belongsToMany(Topic::class);
     }
+
+    public function publishStatuses()
+    {
+        return $this->hasMany(PublishStatus::class);
+    }
 }

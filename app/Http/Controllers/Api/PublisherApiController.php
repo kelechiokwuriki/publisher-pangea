@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PublishDataRequest;
 use Illuminate\Http\Request;
 use App\Services\PublisherService;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class PublisherApiController extends Controller
@@ -19,6 +19,18 @@ class PublisherApiController extends Controller
 
     public function publishTopic($topic, Request $dataRequest)
     {
-        return $this->publisherService->pubishTopic($topic, $dataRequest->all());
+        try {
+            $response =  $this->publisherService->publishTopic($topic, $dataRequest->all());
+            return response([
+                'message' => 'publish successful',
+                'data' => $response
+            ], 200);
+        } catch (Exception $e) {
+            Log::error("Failed to publish data: ". $e->getMessage());
+            return response([
+                'message' => 'Failed to publish data',
+                'status' => false
+            ], 400);
+        }
     }
 }

@@ -3,56 +3,61 @@
 namespace App\Services;
 
 use App\Models\PublishStatus;
-use App\Repositories\SubscriptionRepository;
+use App\Repositories\Subscriber\SubscriberRepository;
+use App\Repositories\Topic\TopicRepository;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PublisherService
 {
-    protected $subscriptionRepository;
+    protected $topicRepository;
+    protected $subscriberRepository;
 
-    public function __construct(SubscriptionRepository $subscriptionRepository)
+    public function __construct(TopicRepository $topicRepository, SubscriberRepository $subscriberRepository)
     {
-        $this->subscriptionRepository = $subscriptionRepository;
+        $this->topicRepository = $topicRepository;
+        $this->subscriberRepository = $subscriberRepository;
     }
 
+    public function publishTopic(string $topic, array $message)
+    {
+        $topicExists = $this->topicRepository->where('topic', $topic)->first();
+        $status = '';
+        $publishResponses = [];
+        $data = [
+            'topic' => $topic,
+            'data' => $message
+        ];
 
-    // public function pubishTopic(string $topic, array $data)
-    // {
-    //     $publishResponse = [];
-    //     $status = "";
+        if (count($topicExists->subscribers) > 0) {
+            $subscribers = $topicExists->subscribers;
 
-    //     $this->subscriptionRepository->where('topic', $topic)->chunk(100, function ($subscribers) use ($data, $topic, &$publishResponse, $status) {
-    //         if (count($subscribers) <= 0) {
-    //             Log::debug("Publishing without subscribers.
-    //             The instruction said to publish even if no subscriber's exist. If no subscriber exist,
-    //             what url will the data be published to? Also saving compautation power by not publishing if no subscriber.");
-    //             return;
-    //         }
+            foreach($subscribers as $subscriber) {
+                $url = $subscriber->url.'/api/subscription';
+                Log::debug($url);
 
-    //         foreach($subscribers as $subscriber) {
-    //             $url = $subscriber->url .'/'.$topic;
-    //             $response = Http::post($url, $data);
+                $response = Http::post($url, $data);
 
-    //             if (!$response->successful()) {
-    //                 $status = "failed";
-    //             } else {
-    //                 $status = "success";
-    //             }
+                if ($response->successful()) {
+                    $status = 'success';
+                } else {
+                    $status = 'failed';
+                }
 
-    //             $status = PublishStatus::create([
-    //                 'url' => $subscriber->url,
-    //                 'status' => $status,
-    //                 'code' => $response->status(),
-    //                 'data' => json_encode($data)
-    //             ]);
+                $publishStatus = PublishStatus::create([
+                    'subscriber_id' => $subscriber->id,
+                    'status' => $status,
+                    'status_code' => $response->status(),
+                    'data' => json_encode($data)
+                ]);
 
-    //             // add a cron job to retry all failed publishment
+                $publishResponses[$subscriber->url] = $publishStatus;
+            }
 
-    //             $publishResponse[$subscriber->url] = $status;
-    //         }
-    //     });
+            return $publishResponses;
+        }
 
-    //     return $publishResponse;
-    // }
+        Log::debug("Subscribers do not exist for topic: " .$topic);
+        return $publishResponses;
+    }
 }
